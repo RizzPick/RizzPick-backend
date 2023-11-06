@@ -25,6 +25,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.willyoubackend.global.util.AuthorizationUtils.isAdmin;
 
@@ -38,24 +39,37 @@ public class UserProfileController {
     private final UserProfileService userProfileService;
     private final UserRepository userRepository;
 
-    @Operation(summary = "회원 프로필 업데이트")
-    @PutMapping("/updateProfile")
+    @Operation(summary = "회원 프로필 업데이트 (관리자는 다른 회원 프로필도 업데이트 가능)")
+    @PutMapping({"/updateProfile", "/updateProfile/{userId}"})
     public ResponseEntity<ApiResponse<UserProfileResponseDto>> updateUserProfile(
-            @AuthenticationPrincipal UserDetailsImpl userDetails, @Valid @RequestBody UserProfileRequestDto userProfileRequestDto) {
-
-        return userProfileService.updateUserProfile(userDetails.getUser(), userProfileRequestDto);
-    }
-    @Operation(summary = "관리자에 의한 회원 프로필 업데이트")
-    @PutMapping("/admin/updateProfile/{userId}")
-    public ResponseEntity<ApiResponse<UserProfileResponseDto>> adminUpdateUserProfile(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
-            @PathVariable Long userId,
+            @PathVariable Optional<Long> userId,
             @Valid @RequestBody UserProfileRequestDto userProfileRequestDto) {
 
-        UserProfileResponseDto updatedProfile = userProfileService.adminUpdateUserProfile(userDetails.getUser(), userId, userProfileRequestDto);
+        Long idToUpdate = userId.orElseGet(() -> userDetails.getUser().getId());
+        UserProfileResponseDto updatedProfile = userProfileService.updateUserProfile(userDetails.getUser(), idToUpdate, userProfileRequestDto);
 
         return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.successData(updatedProfile));
     }
+
+//    @Operation(summary = "회원 프로필 업데이트")
+//    @PutMapping("/updateProfile")
+//    public ResponseEntity<ApiResponse<UserProfileResponseDto>> updateUserProfile(
+//            @AuthenticationPrincipal UserDetailsImpl userDetails, @Valid @RequestBody UserProfileRequestDto userProfileRequestDto) {
+//
+//        return userProfileService.updateUserProfile(userDetails.getUser(), userProfileRequestDto);
+//    }
+//    @Operation(summary = "관리자에 의한 회원 프로필 업데이트")
+//    @PutMapping("/admin/updateProfile/{userId}")
+//    public ResponseEntity<ApiResponse<UserProfileResponseDto>> adminUpdateUserProfile(
+//            @AuthenticationPrincipal UserDetailsImpl userDetails,
+//            @PathVariable Long userId,
+//            @Valid @RequestBody UserProfileRequestDto userProfileRequestDto) {
+//
+//        UserProfileResponseDto updatedProfile = userProfileService.adminUpdateUserProfile(userDetails.getUser(), userId, userProfileRequestDto);
+//
+//        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.successData(updatedProfile));
+//    }
 
 
     @Operation(summary = "프로필 추천 MySQL")

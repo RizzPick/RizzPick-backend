@@ -48,50 +48,68 @@ public class UserProfileService {
     private final UserNopeStatusRepository userNopeStatusRepository;
     private final ProfileImageRepository profileImageRepository;
 
-    public ResponseEntity<ApiResponse<UserProfileResponseDto>> updateUserProfile(UserEntity userEntity, UserProfileRequestDto userProfileRequestDto) {
-
-        if (userProfileRequestDto.getNickname() == null || userProfileRequestDto.getNickname().isEmpty()) {
-            throw new CustomException(ErrorCode.INVALID_NICKNAME);
-        }
-
-        if (userProfileRequestDto.getGender() == null || userProfileRequestDto.getGender().isEmpty()) {
-            throw new CustomException(ErrorCode.INVALID_GENDER);
-        }
-
-        UserEntity loggedInUser = findUserById(userEntity.getId());
-
-        UserProfileEntity userProfileEntity = userEntity.getUserProfileEntity();
-
-        userProfileEntity.setUserEntity(loggedInUser);
-        userProfileEntity.updateProfile(userProfileRequestDto);
-
-        List<ProfileImageEntity> profileImageEntities = profileImageRepository.findAllByUserEntity(userEntity);
-
-        userProfileEntity.setUserActiveStatus(!profileImageEntities.isEmpty()); // 프로필 이미지가 있으면 true, 없으면 false
-
-        userProfileRepository.save(userProfileEntity);
-
-        UserProfileResponseDto userProfileResponseDto = new UserProfileResponseDto(loggedInUser);
-
-        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.successData(userProfileResponseDto));
-    }
-
-    public UserProfileResponseDto adminUpdateUserProfile(UserEntity adminUser, Long userId, UserProfileRequestDto userProfileRequestDto) {
-        if (!AuthorizationUtils.isAdmin(adminUser)) {
+    public UserProfileResponseDto updateUserProfile(UserEntity requestingUser, Long userId, UserProfileRequestDto userProfileRequestDto) {
+        // If the requesting user is not the target user, check if they are an admin
+        if (!requestingUser.getId().equals(userId) && !AuthorizationUtils.isAdmin(requestingUser)) {
             throw new CustomException(ErrorCode.NOT_AUTHORIZED);
         }
 
-        UserEntity targetUser = findUserById(userId);
-        UserProfileEntity userProfileEntity = targetUser.getUserProfileEntity();
+        UserEntity userToUpdate = findUserById(userId);
+        UserProfileEntity userProfileEntity = userToUpdate.getUserProfileEntity();
         userProfileEntity.updateProfile(userProfileRequestDto);
 
-        List<ProfileImageEntity> profileImageEntities = profileImageRepository.findAllByUserEntity(targetUser);
+        List<ProfileImageEntity> profileImageEntities = profileImageRepository.findAllByUserEntity(userToUpdate);
         userProfileEntity.setUserActiveStatus(!profileImageEntities.isEmpty());
 
         userProfileRepository.save(userProfileEntity);
 
-        return new UserProfileResponseDto(targetUser);
+        return new UserProfileResponseDto(userToUpdate);
     }
+
+//    public ResponseEntity<ApiResponse<UserProfileResponseDto>> updateUserProfile(UserEntity userEntity, UserProfileRequestDto userProfileRequestDto) {
+//
+//        if (userProfileRequestDto.getNickname() == null || userProfileRequestDto.getNickname().isEmpty()) {
+//            throw new CustomException(ErrorCode.INVALID_NICKNAME);
+//        }
+//
+//        if (userProfileRequestDto.getGender() == null || userProfileRequestDto.getGender().isEmpty()) {
+//            throw new CustomException(ErrorCode.INVALID_GENDER);
+//        }
+//
+//        UserEntity loggedInUser = findUserById(userEntity.getId());
+//
+//        UserProfileEntity userProfileEntity = userEntity.getUserProfileEntity();
+//
+//        userProfileEntity.setUserEntity(loggedInUser);
+//        userProfileEntity.updateProfile(userProfileRequestDto);
+//
+//        List<ProfileImageEntity> profileImageEntities = profileImageRepository.findAllByUserEntity(userEntity);
+//
+//        userProfileEntity.setUserActiveStatus(!profileImageEntities.isEmpty()); // 프로필 이미지가 있으면 true, 없으면 false
+//
+//        userProfileRepository.save(userProfileEntity);
+//
+//        UserProfileResponseDto userProfileResponseDto = new UserProfileResponseDto(loggedInUser);
+//
+//        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.successData(userProfileResponseDto));
+//    }
+//
+//    public UserProfileResponseDto adminUpdateUserProfile(UserEntity adminUser, Long userId, UserProfileRequestDto userProfileRequestDto) {
+//        if (!AuthorizationUtils.isAdmin(adminUser)) {
+//            throw new CustomException(ErrorCode.NOT_AUTHORIZED);
+//        }
+//
+//        UserEntity targetUser = findUserById(userId);
+//        UserProfileEntity userProfileEntity = targetUser.getUserProfileEntity();
+//        userProfileEntity.updateProfile(userProfileRequestDto);
+//
+//        List<ProfileImageEntity> profileImageEntities = profileImageRepository.findAllByUserEntity(targetUser);
+//        userProfileEntity.setUserActiveStatus(!profileImageEntities.isEmpty());
+//
+//        userProfileRepository.save(userProfileEntity);
+//
+//        return new UserProfileResponseDto(targetUser);
+//    }
 
     public ResponseEntity<ApiResponse<List<UserProfileResponseDto>>> getRecommendations(UserEntity userEntity) {
 
