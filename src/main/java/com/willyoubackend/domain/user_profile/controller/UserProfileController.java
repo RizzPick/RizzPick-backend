@@ -39,14 +39,9 @@ public class UserProfileController {
     @Operation(summary = "회원 프로필 업데이트")
     @PutMapping("/updateProfile")
     public ResponseEntity<ApiResponse<UserProfileResponseDto>> updateUserProfile(
-            @AuthenticationPrincipal UserDetailsImpl userDetails,
-            @RequestParam(required = false) Long userId, // 관리자가 다른 유저를 수정할 수 있게 userId 파라미터 추가
-            @Valid @RequestBody UserProfileRequestDto userProfileRequestDto) {
+            @AuthenticationPrincipal UserDetailsImpl userDetails, @Valid @RequestBody UserProfileRequestDto userProfileRequestDto) {
 
-        ApiResponse<UserProfileResponseDto> updateResult = userProfileService.updateUserProfile(
-                userDetails.getUser(), userId, userProfileRequestDto);
-
-        return ResponseEntity.ok(updateResult);
+        return userProfileService.updateUserProfile(userDetails.getUser(), userProfileRequestDto);
     }
 
     @Operation(summary = "프로필 추천 MySQL")

@@ -13,6 +13,7 @@ import com.willyoubackend.domain.user_profile.dto.UserOwnProfileResponseDto;
 import com.willyoubackend.domain.user_profile.dto.UserProfileRequestDto;
 import com.willyoubackend.domain.user_profile.dto.UserProfileResponseDto;
 import com.willyoubackend.domain.user_profile.entity.GenderEnum;
+import com.willyoubackend.domain.user_profile.entity.ProfileImageEntity;
 import com.willyoubackend.domain.user_profile.entity.UserProfileEntity;
 import com.willyoubackend.domain.user_profile.entity.UserRecommendations;
 import com.willyoubackend.domain.user_profile.repository.ProfileImageRepository;
@@ -23,9 +24,11 @@ import com.willyoubackend.global.exception.CustomException;
 import com.willyoubackend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,30 +47,8 @@ public class UserProfileService {
     private final UserNopeStatusRepository userNopeStatusRepository;
     private final ProfileImageRepository profileImageRepository;
 
-    public ApiResponse<UserProfileResponseDto> updateUserProfile(UserEntity currentUser, Long userId, UserProfileRequestDto userProfileRequestDto) {
-        UserEntity userEntityToUpdate;
+    public ResponseEntity<ApiResponse<UserProfileResponseDto>> updateUserProfile(UserEntity userEntity, UserProfileRequestDto userProfileRequestDto) {
 
-        // 관리자가 다른 유저의 정보를 수정하는 경우
-        if (userId != null && currentUser.getRole().equals(UserRoleEnum.ADMIN)) {
-            Optional<UserEntity> userEntityOptional = userRepository.findById(userId);
-            if (!userEntityOptional.isPresent()) {
-                throw new CustomException(ErrorCode.USER_NOT_FOUND);
-            }
-            userEntityToUpdate = userEntityOptional.get();
-        } else {
-            // 일반 사용자가 자신의 정보를 수정하는 경우 또는 관리자가 userId 없이 자신의 정보를 수정하는 경우
-            userEntityToUpdate = currentUser;
-        }
-
-        // 프로필 업데이트 로직
-        updateUserProfileWithRequestData(userEntityToUpdate, userProfileRequestDto);
-
-        // 업데이트된 프로필 정보로 DTO 생성
-        UserProfileResponseDto userProfileResponseDto = new UserProfileResponseDto(userEntityToUpdate);
-        return ApiResponse.successData(userProfileResponseDto);
-    }
-
-    private void updateUserProfileWithRequestData(UserEntity userEntity, UserProfileRequestDto userProfileRequestDto) {
         if (userProfileRequestDto.getNickname() == null || userProfileRequestDto.getNickname().isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_NICKNAME);
         }
@@ -76,17 +57,22 @@ public class UserProfileService {
             throw new CustomException(ErrorCode.INVALID_GENDER);
         }
 
+        UserEntity loggedInUser = findUserById(userEntity.getId());
+
         UserProfileEntity userProfileEntity = userEntity.getUserProfileEntity();
 
-        // 프로필 업데이트 로직
+        userProfileEntity.setUserEntity(loggedInUser);
         userProfileEntity.updateProfile(userProfileRequestDto);
 
-        // 프로필 이미지 존재 여부 확인 후 상태 업데이트
-        boolean hasProfileImages = !profileImageRepository.findAllByUserEntity(userEntity).isEmpty();
-        userProfileEntity.setUserActiveStatus(hasProfileImages);
+        List<ProfileImageEntity> profileImageEntities = profileImageRepository.findAllByUserEntity(userEntity);
 
-        // 변경 사항 저장
+        userProfileEntity.setUserActiveStatus(!profileImageEntities.isEmpty()); // 프로필 이미지가 있으면 true, 없으면 false
+
         userProfileRepository.save(userProfileEntity);
+
+        UserProfileResponseDto userProfileResponseDto = new UserProfileResponseDto(loggedInUser);
+
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.successData(userProfileResponseDto));
     }
 
     public ResponseEntity<ApiResponse<List<UserProfileResponseDto>>> getRecommendations(UserEntity userEntity) {
