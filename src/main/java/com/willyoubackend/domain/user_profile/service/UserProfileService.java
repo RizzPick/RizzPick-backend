@@ -45,7 +45,15 @@ public class UserProfileService {
     private final ProfileImageRepository profileImageRepository;
 
     public UserProfileResponseDto updateUserProfile(UserEntity requestingUser, Long userId, UserProfileRequestDto userProfileRequestDto) {
-        // If the requesting user is not the target user, check if they are an admin
+
+        if (userProfileRequestDto.getNickname() == null || userProfileRequestDto.getNickname().isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_NICKNAME);
+        }
+
+        if (userProfileRequestDto.getGender() == null || userProfileRequestDto.getGender().isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_GENDER);
+        }
+
         if (!requestingUser.getId().equals(userId) && !AuthorizationUtils.isAdmin(requestingUser)) {
             throw new CustomException(ErrorCode.NOT_AUTHORIZED);
         }
