@@ -64,7 +64,7 @@ public class ProfileImageService {
         return profileImageEntity;
     }
 
-    private void deleteProfileImage(Long imageId) {
+    public void deleteProfileImage(Long imageId) {
         ProfileImageEntity profileImageEntity = findImageById(imageId);
         UserEntity userEntity = profileImageEntity.getUserEntity();
         List<ProfileImageEntity> profileImageEntities = profileImageRepository.findAllByUserEntity(userEntity);

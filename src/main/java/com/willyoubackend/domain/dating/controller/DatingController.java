@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -82,6 +83,14 @@ public class DatingController {
     public ResponseEntity<ApiResponse<DatingResponseDto>> deleteDating(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
             @PathVariable Long id) {
+        return datingService.deleteDating(userDetails.getUser(), id);
+    }
+
+    @Operation(summary = "관리자 데이트 삭제", description = "관리자가 불건전한 데이트를 삭제할 수 있습니다.")
+    @DeleteMapping("/dating/admin/{id}")
+    public ResponseEntity<ApiResponse<DatingResponseDto>> AdmindeleteDating(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable Long id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUsername = authentication.getName();
 
@@ -89,9 +98,11 @@ public class DatingController {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         // 어드민 권한 확인
-        if (AuthorizationUtils.isAdmin(currentUser) || currentUser.getId().equals(userDetails.getUser().getId())) {
+        if (AuthorizationUtils.isAdmin(currentUser) || currentUser.getId().equals(userDetails.getUsername())) {
+            datingService.deleteDating(userDetails.getUser(), id);
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.successMessage("데이트 계획 삭제 완료"));
+        } else {
             throw new CustomException(ErrorCode.NOT_AUTHORIZED);
         }
-        return datingService.deleteDating(userDetails.getUser(), id);
     }
 }
