@@ -39,18 +39,14 @@ public class UserProfileController {
     @Operation(summary = "회원 프로필 업데이트")
     @PutMapping("/updateProfile")
     public ResponseEntity<ApiResponse<UserProfileResponseDto>> updateUserProfile(
-            @AuthenticationPrincipal UserDetailsImpl userDetails, @Valid @RequestBody UserProfileRequestDto userProfileRequestDto) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String currentUsername = authentication.getName();
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestParam(required = false) Long userId, // 관리자가 다른 유저를 수정할 수 있게 userId 파라미터 추가
+            @Valid @RequestBody UserProfileRequestDto userProfileRequestDto) {
 
-        UserEntity currentUser = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        ApiResponse<UserProfileResponseDto> updateResult = userProfileService.updateUserProfile(
+                userDetails.getUser(), userId, userProfileRequestDto);
 
-        // 어드민 권한 확인
-        if (AuthorizationUtils.isAdmin(currentUser) || currentUser.getId().equals(userDetails.getUser().getId())) {
-            throw new CustomException(ErrorCode.NOT_AUTHORIZED);
-        }
-        return userProfileService.updateUserProfile(userDetails.getUser(), userProfileRequestDto);
+        return ResponseEntity.ok(updateResult);
     }
 
     @Operation(summary = "프로필 추천 MySQL")
