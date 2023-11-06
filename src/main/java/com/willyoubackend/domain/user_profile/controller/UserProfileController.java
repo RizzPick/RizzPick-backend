@@ -26,6 +26,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import static com.willyoubackend.global.util.AuthorizationUtils.isAdmin;
+
 @Tag(name = "회원 프로필", description = "회원 프로필")
 @RestController
 @Slf4j
@@ -43,6 +45,18 @@ public class UserProfileController {
 
         return userProfileService.updateUserProfile(userDetails.getUser(), userProfileRequestDto);
     }
+    @Operation(summary = "관리자에 의한 회원 프로필 업데이트")
+    @PutMapping("/admin/updateProfile/{userId}")
+    public ResponseEntity<ApiResponse<UserProfileResponseDto>> adminUpdateUserProfile(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable Long userId,
+            @Valid @RequestBody UserProfileRequestDto userProfileRequestDto) {
+
+        UserProfileResponseDto updatedProfile = userProfileService.adminUpdateUserProfile(userDetails.getUser(), userId, userProfileRequestDto);
+
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.successData(updatedProfile));
+    }
+
 
     @Operation(summary = "프로필 추천 MySQL")
     @GetMapping("/userprofile/recommendations")
@@ -96,7 +110,7 @@ public class UserProfileController {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         // 어드민 권한 확인
-        if (AuthorizationUtils.isAdmin(currentUser) || currentUser.getId().equals(userId)) {
+        if (isAdmin(currentUser) || currentUser.getId().equals(userId)) {
             userProfileService.deactivateUser(userId);
             return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.successMessage("사용자 비활성화 성공"));
         } else {

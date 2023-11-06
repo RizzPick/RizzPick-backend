@@ -22,6 +22,7 @@ import com.willyoubackend.domain.user_profile.repository.UserRecommendationsRepo
 import com.willyoubackend.global.dto.ApiResponse;
 import com.willyoubackend.global.exception.CustomException;
 import com.willyoubackend.global.exception.ErrorCode;
+import com.willyoubackend.global.util.AuthorizationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -73,6 +74,23 @@ public class UserProfileService {
         UserProfileResponseDto userProfileResponseDto = new UserProfileResponseDto(loggedInUser);
 
         return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.successData(userProfileResponseDto));
+    }
+
+    public UserProfileResponseDto adminUpdateUserProfile(UserEntity adminUser, Long userId, UserProfileRequestDto userProfileRequestDto) {
+        if (!AuthorizationUtils.isAdmin(adminUser)) {
+            throw new CustomException(ErrorCode.NOT_AUTHORIZED);
+        }
+
+        UserEntity targetUser = findUserById(userId);
+        UserProfileEntity userProfileEntity = targetUser.getUserProfileEntity();
+        userProfileEntity.updateProfile(userProfileRequestDto);
+
+        List<ProfileImageEntity> profileImageEntities = profileImageRepository.findAllByUserEntity(targetUser);
+        userProfileEntity.setUserActiveStatus(!profileImageEntities.isEmpty());
+
+        userProfileRepository.save(userProfileEntity);
+
+        return new UserProfileResponseDto(targetUser);
     }
 
     public ResponseEntity<ApiResponse<List<UserProfileResponseDto>>> getRecommendations(UserEntity userEntity) {
