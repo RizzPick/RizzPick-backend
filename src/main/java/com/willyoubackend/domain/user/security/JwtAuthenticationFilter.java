@@ -65,7 +65,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         refreshTokenRepository.save(refreshToken);
         response.addHeader(JwtUtil.REFRESH_HEADER, "Bearer " + refreshToken.getToken());
         response.setStatus(HttpServletResponse.SC_OK);
-        writeResponse(response, "로그인 성공 프로필 설정현황 " + userActiveStatus);
+        writeResponse(response, "로그인 성공");
     }
 
     @Override
